@@ -3,93 +3,29 @@ import json
 
 def lambda_handler(req, context):
 
-  query = """
-  {
-    repays{
-        id
-        timestamp
-        account{
-        id
-        }
-        market {
-        id
-        }
-        asset{
-        id
-        symbol
-        }
-        amount
-        amountUSD
+  query = """{
+    financialsDailySnapshots{
+      id
+      totalValueLockedUSD
+      protocolControlledValueUSD
+      dailySupplySideRevenueUSD
+      cumulativeSupplySideRevenueUSD
+      dailyProtocolSideRevenueUSD
+      cumulativeProtocolSideRevenueUSD
+      dailyTotalRevenueUSD
+      cumulativeTotalRevenueUSD
+      totalDepositBalanceUSD
+      dailyDepositUSD
+      cumulativeDepositUSD
+      totalBorrowBalanceUSD
+      dailyBorrowUSD
+      cumulativeBorrowUSD
+      dailyLiquidateUSD
+      cumulativeLiquidateUSD
+      dailyWithdrawUSD
+      dailyRepayUSD
     }
-        borrows {
-            id
-        timestamp
-        account{
-            id
-        }
-        market {
-            id
-        }
-        asset{
-            id
-            symbol
-        }
-        amount
-        amountUSD
-    }
-        withdraws {
-            id
-        timestamp
-        account{
-            id
-        }
-        market {
-            id
-        }
-        asset{
-            id
-            symbol
-        }
-        amount
-        amountUSD
-    }
-        deposits {
-            id
-        timestamp
-        account{
-            id
-        }
-        market {
-            id
-        }
-        asset{
-            id
-            symbol
-        }
-        amount
-        amountUSD
-    }
-        liquidates {
-            id
-        timestamp
-        liquidator{
-            id
-        }
-        liquidatee{
-            id
-        }
-        market {
-            id
-        }
-        asset{
-            id
-            symbol
-        }
-        amount
-        amountUSD
-    }
-  }
-  """
+  }"""
   url = 'https://api.thegraph.com/subgraphs/name/messari/compound-ethereum'
   r = requests.post(url, json={'query': query})
 
@@ -97,26 +33,24 @@ def lambda_handler(req, context):
   json_data = json.loads(r.text)
 
   # print(json_data)
+
   since_id = None
-  dataext = None #json_data["data"].items() #json.loads(result.text)
-  eventsData = []
+  dataext = json_data #json.loads(result.text)
 
-  for k in json_data["data"].keys():
-  
-    dataext = json_data["data"][k]
-    # Reformat response into nice, flat tables
-    for t in dataext:
-        # Remember the first id we encounter, which is the most recent
-        if (since_id == None) :
-            since_id = t["id"]
 
-        # Add all eventsData
-        eventsData.append({
-            "event_type": k,
-            "id": t["id"],
-            "timestamp": t["timestamp"], 
-            "event_payload": t
-        })
+  # Reformat Twitter's response into nice, flat tables
+  financialsDailySnapshots = []
+  for t in dataext:
+      # Remember the first id we encounter, which is the most recent
+      if (since_id == None) :
+          since_id = t["id"]
+
+      # Add all financialsDailySnapshots
+      financialsDailySnapshots.append({
+          "id": t["id"],
+          "totalValueLockedUSD": t["totalValueLockedUSD"], #[0]["statusSeverityDescription"],
+          "dailySupplySideRevenueUSD" : t["dailySupplySideRevenueUSD"]
+      })
 
   # Send JSON response back to Fivetran
 
@@ -128,12 +62,12 @@ def lambda_handler(req, context):
           since_id: since_id
       },
       "schema" : {
-          "eventsData" : {
+          "financialsDailySnapshots" : {
               "primary_key" : ["id"]
           }
       },
       "insert": {
-          "eventsData": eventsData
+          "financialsDailySnapshots": financialsDailySnapshots
       },
       "hasMore" : False
   }
